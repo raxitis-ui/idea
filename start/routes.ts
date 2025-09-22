@@ -10,6 +10,7 @@
 import router from '@adonisjs/core/services/router'
 import IdeasController from '#controllers/ideas_controller'
 import AuthController from '#controllers/auth_controller'
+import FiltersController from '#controllers/filters_controller'
 import { middleware } from './kernel.js'
 
 
@@ -36,3 +37,6 @@ router.get('/search', [IdeasController, 'search'])
 router.post('/:id/react', [IdeasController, 'react'])
 router.post('/generate', [IdeasController, 'generate'])
 }).prefix('ideas').use(middleware.auth({ guards: ['api'] }))
+
+// Filtri pubblici
+router.get('/filters/grouped', [FiltersController, 'grouped'])

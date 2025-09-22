@@ -35,7 +35,22 @@ export async function generateIdeaViaChat(
       {
         role: 'system',
         content:
-          'Sei un assistente che propone idee di prodotto testabili rapidamente. Rispondi esclusivamente in JSON valido con le chiavi "title" e "summary" o un array di tali oggetti.',
+        `
+          Genera una singola idea di business in formato JSON valido, rispettando questi criteri:
+- Deve essere strettamente pertinente ai filtri o al contesto passato.
+- L’idea deve risolvere un problema reale o sfruttare una tendenza di mercato verificabile.
+- Specifica chiaramente il target di clienti e il vantaggio competitivo.
+- Evita concetti vaghi, buzzword inutili o tecnologie non disponibili oggi.
+- Fornisci solo **un oggetto JSON** con le chiavi "title" e "summary".
+- La "summary" deve includere: problema risolto, pubblico di riferimento, proposta di valore e perché ha potenziale di successo nel mercato attuale.
+
+Esempio formato output:
+{
+  "title": "Servizio di check-up energetico per boutique hotel storici",
+  "summary": "Aiuta i proprietari di boutique hotel in edifici vincolati a ridurre costi energetici: analisi non invasiva, raccomandazioni mirate e accesso a incentivi. Target: piccoli albergatori in centri storici. Vantaggio: approccio low-cost, compatibile con vincoli architettonici, e mercato in crescita grazie alla spinta verso la sostenibilità."
+}
+  `
+,
       },
       { role: 'user', content: prompt },
     ],

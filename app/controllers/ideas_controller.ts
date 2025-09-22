@@ -162,6 +162,7 @@ export default class IdeasController {
     return response.ok({ count: data.length, limit, offset, data })
   }
   public async generate({ request, response }: HttpContext) {
+
     const body = request.all()
     const input = Array.isArray(body.filters) ? body.filters : []
 
@@ -413,35 +414,16 @@ export default class IdeasController {
         await savedIdea.related('filters').attach(filterIdsToAttach)
         await savedIdea.load('filters')
       }
+      console.log(filterIdsToAttach)  
     }
-
+   
     return response.ok({
-      message: 'Filtri risolti e raggruppati per genere',
-      received: input.length,
-      resolved: found.length,
-      unresolvedIds,
-      byGenre,
-      prompt_suggestion,
-      chatIdea,
-      normalization: chatIdea
-        ? {
-            title_norm,
-            summary_norm,
-            canonical_hash,
-          }
-        : null,
-      attempts,
-      dedup: dedupDecision
-        ? {
-            decision: dedupDecision,
-            nearestId,
-            nearestScore,
-          }
-        : null,
-      idea: savedIdea,
-      attachedFilterIds: savedIdea ? savedIdea.filters?.map((f: any) => f.id) : [],
-      banlist: Array.from(banlist),
-      rejectedTitles,
+      title: chatIdea?.title,
+      description: chatIdea?.summary,
+      likes_count: 0,
+      dislikes_count: 0,
+      votes_score: 0,
+      
     })
   }
 }

@@ -21,7 +21,7 @@ export function buildChatPrompt(
 
   if (opts?.banlist && opts.banlist.length > 0) {
     lines.push(
-      `Non proporre idee che includano o ruotino attorno a: ${opts.banlist.join(', ')}`
+      `Non proporre idee che includano o ruotino attorno a : ${opts.banlist.join(', ')}, pero deve essere sempre inerente ai filtri`
     )
   }
 
