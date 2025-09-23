@@ -43,6 +43,8 @@ export async function generateIdeaViaChat(
 - Evita concetti vaghi, buzzword inutili o tecnologie non disponibili oggi.
 - Fornisci solo **un oggetto JSON** con le chiavi "title" e "summary".
 - La "summary" deve includere: problema risolto, pubblico di riferimento, proposta di valore e perché ha potenziale di successo nel mercato attuale.
+ - NON lasciare vuoti "title" o "summary". Il titolo deve avere almeno 8 caratteri reali (no placeholder). La summary deve avere almeno 60 caratteri e massimo 600.
+ - Rispondi SOLO con JSON valido, senza testo aggiuntivo prima o dopo.
 
 Esempio formato output:
 {
@@ -71,11 +73,16 @@ function safeParseIdeaJson(text: string): ChatIdea | ChatIdea[] | null {
   if (!text) return null
   try {
     const obj = JSON.parse(text)
-    if (Array.isArray(obj)) {
-      const ok = obj.every((x) => x && typeof x.title === 'string' && typeof x.summary === 'string')
-      return ok ? obj : null
+    const isValid = (x: any) => {
+      const title = typeof x?.title === 'string' ? x.title.trim() : ''
+      const summary = typeof x?.summary === 'string' ? x.summary.trim() : ''
+      return title.length >= 8 && summary.length >= 60
     }
-    if (obj && typeof obj.title === 'string' && typeof obj.summary === 'string') return obj
+    if (Array.isArray(obj)) {
+      const filtered = obj.filter((x) => isValid(x))
+      return filtered.length > 0 ? filtered : null
+    }
+    if (isValid(obj)) return obj
   } catch {}
   return null
 }

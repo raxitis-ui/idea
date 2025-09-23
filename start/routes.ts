@@ -36,6 +36,7 @@ router.group(() => {
 router.get('/search', [IdeasController, 'search'])
 router.post('/:id/react', [IdeasController, 'react'])
 router.post('/generate', [IdeasController, 'generate'])
+router.get('/reactions', [IdeasController, 'reactions'])
 }).prefix('ideas').use(middleware.auth({ guards: ['api'] }))
 
 // Filtri pubblici

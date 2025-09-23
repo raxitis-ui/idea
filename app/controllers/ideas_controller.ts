@@ -1,6 +1,5 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import Filter from '#models/filter'
-import { buildChatPrompt } from '#services/idea_prompt'
 import { generateIdeaViaChat } from '#services/chat_provider'
 import Idea from '#models/idea'
 import crypto from 'node:crypto'
@@ -83,6 +82,36 @@ export default class IdeasController {
     }))
 
     return response.ok({ count: data.length, limit, offset, includeEmbedding, data })
+  }
+  public async reactions({ auth, request, response }: HttpContext) {
+    const user = await auth.use('api').authenticate()
+    const limit = Math.min(Number(request.input('limit', 50)) || 50, 200)
+    const offset = Number(request.input('offset', 0)) || 0
+
+    const rows = await db
+      .from('idea_reactions as r')
+      .join('ideas', 'ideas.id', 'r.idea_id')
+      .where('r.user_id', user.id)
+      .select(
+        'ideas.id',
+        'ideas.title',
+        'ideas.description',
+        'r.reaction',
+        'r.created_at'
+      )
+      .orderBy('r.created_at', 'desc')
+      .limit(limit)
+      .offset(offset)
+
+    const data = rows.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      reaction: r.reaction,
+      reacted_at: r.created_at,
+    }))
+
+    return response.ok({ count: data.length, limit, offset, data })
   }
   public async search({ request, response }: HttpContext) {
     const limit = Math.min(Number(request.input('limit', 50)) || 50, 200)
@@ -182,10 +211,9 @@ export default class IdeasController {
       byGenre[genreName].push({ id: f.id, name: f.name, slug: (f as any).slug })
     }
 
-    const foundIds = new Set(found.map((f) => f.id))
-    const unresolvedIds = idsArr.filter((i) => !foundIds.has(i))
 
-    const prompt_suggestion = buildChatPrompt(byGenre)
+
+
 
     // Pre-carica pool ultime N idee per similarità testuale (facoltativo: filtrare per categoria)
     const candidates = await Idea.query()
@@ -221,10 +249,10 @@ export default class IdeasController {
     let canonical_hash: string | null = null
     let dedupDecision: 'REJECT' | 'ACCEPT_LINK' | 'ACCEPT' | null = null
     let nearestId: number | null = null
-    let nearestScore: number | null = null
     let lastEmbedding: number[] | null = null
     let attempts = 0
     const maxAttempts = 3
+    const rejectionReasons: string[] = []
 
     while (attempts < maxAttempts) {
       attempts++
@@ -262,6 +290,7 @@ export default class IdeasController {
           if (exists) {
             console.log('[dedup][exact] duplicate hash hit, id=', exists.id)
             rejectedTitles.push(idea.title)
+            rejectionReasons.push('exact_duplicate')
             addToBanlist(idea.title, idea.summary)
             continue // prova prossimo candidato o rigenera
           }
@@ -318,6 +347,7 @@ export default class IdeasController {
               bestSummaryId
             )
             rejectedTitles.push(idea.title)
+            rejectionReasons.push('textual_similarity')
             addToBanlist(
               idea.title,
               idea.summary,
@@ -352,6 +382,7 @@ export default class IdeasController {
           if (bestCos >= 0.80) {
             console.log('[dedup][embedding] REJECT (semantic)')
             rejectedTitles.push(idea.title)
+            rejectionReasons.push('semantic_similarity')
             addToBanlist(
               idea.title,
               idea.summary,
@@ -365,7 +396,6 @@ export default class IdeasController {
           if (bestCos >= 0.75) {
             dedupDecision = 'ACCEPT_LINK'
             nearestId = bestId
-            nearestScore = bestCos
           } else {
             dedupDecision = 'ACCEPT'
           }
@@ -380,6 +410,7 @@ export default class IdeasController {
         // Re-prompt anti-eco: registra titoli banditi
         console.log('[reprompt] rejected so far:', rejectedTitles)
       } catch (err) {
+        rejectionReasons.push('invalid_or_non_json_output')
         continue
       }
     }
@@ -423,7 +454,8 @@ export default class IdeasController {
       likes_count: 0,
       dislikes_count: 0,
       votes_score: 0,
-      
+      rejected: chatIdea ? false : true,
+      rejection_reasons: chatIdea ? [] : Array.from(new Set(rejectionReasons)),
     })
   }
 }
