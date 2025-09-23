@@ -39,7 +39,7 @@ export async function generateIdeaViaChat(
           Genera una singola idea di business in formato JSON valido, rispettando questi criteri:
 - Deve essere strettamente pertinente ai filtri o al contesto passato.
 - L’idea deve risolvere un problema reale o sfruttare una tendenza di mercato verificabile.
-- Specifica chiaramente il target di clienti e il vantaggio competitivo.
+- Specifica chiaramente il target di clienti, il modello di business, e un potenziale vantaggio competitivo.
 - Evita concetti vaghi, buzzword inutili o tecnologie non disponibili oggi.
 - Fornisci solo **un oggetto JSON** con le chiavi "title" e "summary".
 - La "summary" deve includere: problema risolto, pubblico di riferimento, proposta di valore e perché ha potenziale di successo nel mercato attuale.

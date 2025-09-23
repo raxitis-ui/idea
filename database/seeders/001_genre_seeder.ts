@@ -7,13 +7,14 @@ export default class extends BaseSeeder {
       'Tipologia di Tecnologia',
       'Ambito',
       'Modello di Business',
+      'Modello di Revenue',
       'Target di genere',
       'Target di età',
       'Target di professione',
       'Target geografico',
-      'Livello di innovazione',
       'Impegno sociale e ambientale',
-    
+      'Tempistiche di sviluppo',
+      'Integrazioni esterne'
     ]
 
     for (const name of genreNames) {
