@@ -8,8 +8,79 @@ import { embedText, cosine } from '#services/embedding_provider'
 import User from '#models/user'
 import db from '@adonisjs/lucid/services/db'
 import IdeaReaction from '#models/idea_reaction'
+import { DateTime } from 'luxon'
 
 export default class IdeasController {
+  public async topVoted({ request, response }: HttpContext) {
+    const periodRaw = String(request.input('period', 'always')).toLowerCase().trim()
+    const limit = Math.min(Number(request.input('limit', 10)) || 10, 10)
+
+    const period = ((): 'always' | 'week' | 'month' | 'year' => {
+      if (['always', 'all'].includes(periodRaw)) return 'always'
+      if (['week', 'weekly'].includes(periodRaw)) return 'week'
+      if (['month', 'monthly'].includes(periodRaw)) return 'month'
+      if (['year', 'yearly', 'annual'].includes(periodRaw)) return 'year'
+      return 'always'
+    })()
+
+    let fromDate: Date | null = null
+    if (period === 'week') fromDate = DateTime.now().minus({ days: 7 }).toJSDate()
+    else if (period === 'month') fromDate = DateTime.now().minus({ months: 1 }).toJSDate()
+    else if (period === 'year') fromDate = DateTime.now().minus({ years: 1 }).toJSDate()
+
+    let rows: any[] = []
+
+    if (period === 'always') {
+      rows = await db
+        .from('ideas')
+        .leftJoin('idea_reactions as r', 'r.idea_id', 'ideas.id')
+        .select(
+          'ideas.id',
+          'ideas.title',
+          'ideas.description',
+          db.raw("COALESCE(SUM(CASE WHEN r.reaction='like' THEN 1 ELSE 0 END), ideas.likes_count, 0) as likes_count"),
+          db.raw("COALESCE(SUM(CASE WHEN r.reaction='dislike' THEN 1 ELSE 0 END), ideas.dislikes_count, 0) as dislikes_count"),
+          db.raw("COALESCE(SUM(CASE WHEN r.reaction='like' THEN 1 ELSE 0 END), ideas.likes_count, 0) - COALESCE(SUM(CASE WHEN r.reaction='dislike' THEN 1 ELSE 0 END), ideas.dislikes_count, 0) as votes_score")
+        )
+        .groupBy('ideas.id')
+        .orderBy('votes_score', 'desc')
+        .orderBy('ideas.id', 'desc')
+        .limit(limit)
+    } else {
+      const query = db
+        .from('ideas')
+        .leftJoin('idea_reactions as r', 'r.idea_id', 'ideas.id')
+        .select(
+          'ideas.id',
+          'ideas.title',
+          'ideas.description',
+          db.raw("COALESCE(SUM(CASE WHEN r.reaction='like' THEN 1 ELSE 0 END), 0) as likes_count"),
+          db.raw("COALESCE(SUM(CASE WHEN r.reaction='dislike' THEN 1 ELSE 0 END), 0) as dislikes_count"),
+          db.raw("COALESCE(SUM(CASE WHEN r.reaction='like' THEN 1 ELSE 0 END), 0) - COALESCE(SUM(CASE WHEN r.reaction='dislike' THEN 1 ELSE 0 END), 0) as votes_score")
+        )
+        .groupBy('ideas.id')
+        .orderBy('votes_score', 'desc')
+        .orderBy('ideas.id', 'desc')
+        .limit(limit)
+
+      if (fromDate) {
+        query.where('r.created_at', '>=', fromDate)
+      }
+
+      rows = await query
+    }
+
+    const data = rows.map((r: any) => ({
+      id: r.id,
+      title: r.title,
+      description: r.description,
+      likes_count: Number(r.likes_count ?? 0),
+      dislikes_count: Number(r.dislikes_count ?? 0),
+      votes_score: Number(r.votes_score ?? 0),
+    }))
+
+    return response.ok({ count: data.length, limit, period, data })
+  }
   public async react({ auth, params, request, response }: HttpContext) {
     const user = await auth.use('api').authenticate()
     const ideaId = Number(params.id)

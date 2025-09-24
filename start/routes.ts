@@ -34,6 +34,7 @@ router.group(() => {
 router.group(() => {
   router.get('/', [IdeasController, 'index'])
 router.get('/search', [IdeasController, 'search'])
+router.get('/top', [IdeasController, 'topVoted'])
 router.post('/:id/react', [IdeasController, 'react'])
 router.post('/generate', [IdeasController, 'generate'])
 router.get('/reactions', [IdeasController, 'reactions'])
